@@ -80,5 +80,12 @@ class IEEEDataset(Dataset):
         seq_len = min(len(events), self.max_seq_len)
         events_tensor = torch.zeros((self.max_seq_len, len(self.event_cols)), dtype=torch.float32)
         events_tensor[:seq_len, :] = torch.tensor(events[:seq_len], dtype=torch.float32)
+
+        # Extract the fraud label! (Take the label of the most recent transaction)
+        if 'isFraud' in client_df.columns:
+            label = int(client_df['isFraud'].iloc[-1])
+        else:
+            label = 0 
+        label_tensor = torch.tensor(label, dtype=torch.long)
         
-        return x_num, x_cat, events_tensor, seq_len
+        return x_num, x_cat, events_tensor, seq_len, label_tensor
