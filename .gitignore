@@ -3,3 +3,8 @@
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+kaggle.json
+kaggle.json.rtf
+*.key
+.env
+.env.local
