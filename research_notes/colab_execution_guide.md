@@ -1,61 +1,52 @@
-# Google Colab Execution Guide for PRAGMA Replication
+# Google Colab Execution Guide for Payments Foundation Model & Adapters
 
-Welcome! This guide outlines the exact, step-by-step process for an upcoming researcher to clone, setup, and execute the PRAGMA replication framework using Google Colab. Colab provides free T4 GPUs which are perfect for testing these deep learning and tabular models.
+Welcome! This guide outlines the exact process to execute the PRAGMA Payments Foundation Model & LoRA Adapter framework using Google Colab's free T4 GPUs.
+
+---
 
 ## Prerequisites
-- A Google Account to access [Google Colab](https://colab.research.google.com/).
-- A Kaggle Account to download the IEEE-CIS Fraud Detection dataset (ensure you have generated a `kaggle.json` API token).
-- Basic familiarity with Jupyter Notebooks and running Python cells.
+- A Google Account for [Google Colab](https://colab.research.google.com/).
+- A Kaggle Account for dataset downloading (`kaggle.json` API key).
 
-## Step 1: Clone the Repository into Colab
-1. Open Google Colab and click **File > New notebook**.
-2. Mount your Google Drive so your progress is saved persistently.
+---
+
+## Step 1: Clone Repository into Google Drive
+1. Open Google Colab and create a new notebook.
+2. Mount Google Drive:
    ```python
    from google.colab import drive
    drive.mount('/content/drive')
    ```
-3. Navigate to a directory in your drive and clone the project repository (assuming this code is hosted on GitHub, replace with actual URL, or upload the zipped codebase):
+3. Navigate to your drive and clone/navigate to the repo:
    ```bash
    cd /content/drive/MyDrive/
-   git clone <YOUR_REPO_URL> Finai-research
+   git clone https://github.com/outlieralpha/Finai-research.git
    cd Finai-research
    ```
 
-## Step 2: Set Up Kaggle for Data Ingestion
-Colab needs your Kaggle API key to download the dataset automatically.
-1. Upload your `kaggle.json` to the Colab environment.
-2. Run the following cell to set it up:
-   ```bash
-   mkdir -p ~/.kaggle
-   cp kaggle.json ~/.kaggle/
-   chmod 600 ~/.kaggle/kaggle.json
-   ```
+---
 
-## Step 3: Run the Pipeline (Sequentially)
-Colab has an execution limit, but each step is designed to save its artifacts (datasets, models) to disk. Proceed by opening each of the provided notebooks sequentially:
+## Step 2: Sequential Execution Pipeline
 
-### A. Data Preparation (`notebooks/data_pipeline.ipynb`)
-- **Action**: Open the notebook and run all cells.
-- **What it does**: Downloads the raw IEEE-CIS dataset, creates pseudo-ClientIDs, processes features, and outputs train/val/test `.parquet` files into the `data/processed/` folder.
+Execute the provided Jupyter notebooks in order:
 
-### B. Evaluate Classical Baselines (`notebooks/classical_baselines.ipynb`)
-- **Action**: Open the notebook and run all cells.
-- **What it does**: Installs XGBoost, LightGBM, CatBoost and trains the tree models. It will print the validation and test AUC metrics.
+### 1. Data Pipeline (`notebooks/01_setup_and_data.ipynb`)
+- **Action**: Open and run all cells.
+- **What it does**: Processes PaySim (6.3M txns) & IEEE-CIS datasets, generates synthetic labels for multi-task learning (Churn, High-Value, Category, Spend Forecast), and exports `.parquet` files to `data/processed/`.
 
-### C. Evaluate Deep Learning Baselines (`notebooks/dl_baselines.ipynb`)
-- **Important**: Ensure your runtime is set to GPU. Go to **Runtime > Change runtime type** -> select **T4 GPU**.
-- **Action**: Open the notebook and run all cells.
-- **What it does**: Installs `pytorch-frame`, materializes the tensor datasets, and trains TabTransformer, FTTransformer, and ResNet representations. 
+### 2. Pre-training Foundation Backbone (`notebooks/02_pretrain_foundation.ipynb`)
+- **GPU Runtime**: Set Runtime -> Change runtime type -> **T4 GPU**.
+- **Action**: Open and run all cells.
+- **What it does**: Performs Masked Event Prediction on PaySim dataset to train the dual-encoder PRAGMA backbone.
+- **Artifact**: Saves checkpoint to `models/pragma_pretrained_paysim.pth`.
 
-### D. Self-Supervised Pre-Training (`notebooks/pretraining.ipynb`)
-- **Important**: Ensure your GPU runtime is active.
-- **Action**: Open the notebook and run all cells.
-- **What it does**: Initializes the PRAGMA dual-encoder architecture and trains the Masked Event Prediction task.
-- **Output**: Saves the foundational representation weights to `models/pragma_pretrained.pth`.
+### 3. Adapter Benchmarking (`notebooks/03_adapter_experiments.ipynb`)
+- **GPU Runtime**: T4 GPU required.
+- **Action**: Open and run all cells.
+- **What it does**: Benchmarks LoRA ($r=8$), Head-Only, Full Fine-Tuning, and XGBoost across 5%, 25%, 100% data availability. Generates data efficiency plots and param comparison tables.
+- **Artifact**: Saves efficiency plot to `results/data_efficiency_curves.png`.
 
-### E. Fine-Tuning and Ablations (`notebooks/finetuning_and_evaluation.ipynb` & `notebooks/ablations.ipynb`)
-- **Action**: Open the notebooks and run all cells.
-- **What it does**: Loads the `.pth` weights, replaces the pre-training head with a classification head, and finetunes on the fraud detection task. Evaluates performance contributions by disabling profile or event streams (ablations).
+---
 
-## Step 4: Analyze Results
-After completing the notebooks, collate the AUC and F1 scores printed at the end of each stage. Compare the Classical Baselines vs DL Baselines vs PRAGMA. Use these results to answer the research questions in the summary report.
+## Step 3: Analyze Results
+Check `results/` for benchmark tables and data efficiency curves. Use `src/config.py` as the single source of truth for paths and model hyperparameters across all notebooks.
